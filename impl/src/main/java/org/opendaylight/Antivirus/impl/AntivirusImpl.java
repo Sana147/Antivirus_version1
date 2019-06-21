@@ -233,7 +233,6 @@ public class AntivirusImpl implements AntivirusService {
 		else if (Mode == 2) { 
 			for (int i = 0; i < App_Precedence.length; i++) {
 				App_Precedence [i] = i;
-				LOG.info("The App_Precedence for App ID " + i + " is " + i + ".");
 			}
 		}
 		return App_Precedence;
@@ -247,7 +246,6 @@ public class AntivirusImpl implements AntivirusService {
 		{
 			/*---------- Fairness (conceived in terms of the ideal of equal) Resource Allocation ----------*/
 			threshold = C/Number_of_Applications;
-			LOG.info("Breakpoint: The threshold for AppID: i" + i + "is " + Threshold_Inventory[i]);
 			Threshold_Inventory [i] = threshold;
 		}
 		return Threshold_Inventory;
@@ -668,7 +666,6 @@ public class AntivirusImpl implements AntivirusService {
 		
 		if (check_format)
 		{
-				LOG.info("Breakpoint: Format is correct.");
 				CreatePacketHeaderFromInput (input);
 				Greeting_Message = Decision_Engine (input);				
 		}
@@ -1159,11 +1156,46 @@ public class AntivirusImpl implements AntivirusService {
 	                return;
 	            nodeList = optNodes.get().getNode();
 	            LOG.info("Breakpoint: No. of detected nodes: {}", nodeList.size());
+	            
+	            for (Node node : nodeList) {
+	            	//String srcID = node.getId().getValue(); // srcID will be something like openflow:1
+	            	NodeId srcID = node.getId();
+	            	LOG.info("Breakpoint: srcID is: " + srcID);
+
+	            	InstanceIdentifier<Flow> flowID = InstanceIdentifier.builder(Nodes.class).child(Node.class, new NodeKey(srcID))
+	                        .augmentation(FlowCapableNode.class)
+	                        .child(Table.class, new TableKey((short)0))  // 0 here is Table ID inside OpenFlow switch with Source ID = srcID
+	                        .child(Flow.class)
+	                        .build();
+	            	
+	            	LOG.info("Breakpoint: The flow ID is: " + flowID);
+	            	
+	            	List<NodeConnector> ports = node.getNodeConnector();
+	            	for (NodeConnector port : ports) {
+	            		LOG.info("In node connector thing");
+	            		LOG.info("Standalone Node {} with port {}", srcID, port.getId().getValue());
+	            	}	            	
+	            }
 	            }
 	            catch (InterruptedException | ExecutionException e) {
 	                e.printStackTrace();
 	            }
 	        }
+	
+	private List<Node> getAllNodes() {
+		InstanceIdentifier<Nodes> nodesIdentifier = InstanceIdentifier.builder(Nodes.class).toInstance();
+        ReadOnlyTransaction transaction = db.newReadOnlyTransaction();
+
+		try {
+			Optional <Nodes> optNodes = transaction.read(LogicalDatastoreType.OPERATIONAL, nodesIdentifier).get();
+			Nodes nodes = optNodes.get();
+			return nodes.getNode();
+		}
+		catch (InterruptedException | ExecutionException e) {
+			LOG.warn ("Exception during reading nodes from datastore: {}", e.getMessage());
+			return null;
+		}
+	}
 	
 	public void testing_function() {
 		 String flowId = "2";
